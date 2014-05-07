@@ -82,17 +82,17 @@ indicating start and end of the region."
 (defun b-kill (beg-extract beg-after end-extract end-after)
   (b-operate-on-region beg-extract beg-after end-extract end-after 'kill-region))
 
-(defun b-operate-on-region-by-match (end-or-beg end-or-inside inside? extractor)
+(defun b-operate-on-region-by-matcher (end-or-beg end-or-inside inside? extractor matcher)
   (cond
    ;; beg end t
    ((and end-or-beg
          (not (eq end-or-inside t))
          inside?)
     (b-operate-on-region
-     (lambda () (search-forward end-or-beg nil t))
+     (lambda () (funcall matcher end-or-beg nil t))
      'identity
      (lambda ()
-       (-when-let (end (search-forward end-or-inside nil t))
+       (-when-let (end (funcall matcher end-or-inside nil t))
          (goto-char (match-beginning 0))
          (b-put-marker-at end)))
      (lambda (x)
@@ -106,13 +106,13 @@ indicating start and end of the region."
          (not inside?))
     (b-operate-on-region
      (lambda ()
-       (-when-let (beg (search-forward end-or-beg nil t))
+       (-when-let (beg (funcall matcher end-or-beg nil t))
          (goto-char (match-beginning 0))
          (b-put-marker-at beg)))
      (lambda (x)
        (goto-char x)
        (b-delete-marker x))
-     (lambda () (search-forward end-or-inside nil t))
+     (lambda () (funcall matcher end-or-inside nil t))
      'identity
      extractor))
    ;; beg t
@@ -123,7 +123,7 @@ indicating start and end of the region."
      (lambda () t)
      'identity
      (lambda ()
-       (-when-let (end (search-forward end-or-beg nil t))
+       (-when-let (end (funcall matcher end-or-beg nil t))
          (goto-char (match-beginning 0))
          (b-put-marker-at end)))
      (lambda (x)
@@ -137,27 +137,34 @@ indicating start and end of the region."
     (b-operate-on-region
      (lambda () t)
      'identity
-     (lambda () (search-forward end-or-beg nil t))
+     (lambda () (funcall matcher end-or-beg nil t))
      'identity
      extractor))))
 
 (defun b-extract-by-match (end-or-beg &optional end-or-inside inside?)
-  (b-operate-on-region-by-match end-or-beg end-or-inside inside? 'buffer-substring-no-properties))
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'buffer-substring-no-properties 'search-forward))
 
 (defun b-extract-by-match-with-properties (end-or-beg &optional end-or-inside inside?)
-  (b-operate-on-region-by-match end-or-beg end-or-inside inside? 'buffer-substring))
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'buffer-substring 'search-forward))
 
 (defun b-delete-by-match (end-or-beg &optional end-or-inside inside?)
-  (b-operate-on-region-by-match end-or-beg end-or-inside inside? 'delete-region))
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'delete-region 'search-forward))
 
 (defun b-kill-by-match (end-or-beg &optional end-or-inside inside?)
-  (b-operate-on-region-by-match end-or-beg end-or-inside inside? 'kill-region))
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'kill-region 'search-forward))
 
 
-(defun b-extract-by-regexp (end-or-beg &optional end-or-inside inside?))
-(defun b-extract-by-regexp-with-properties (end-or-beg &optional end-or-inside inside?))
-(defun b-delete-by-regexp (end-or-beg &optional end-or-inside inside?))
-(defun b-kill-by-regexp (end-or-beg &optional end-or-inside inside?))
+(defun b-extract-by-regexp (end-or-beg &optional end-or-inside inside?)
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'buffer-substring-no-properties 're-search-forward))
+
+(defun b-extract-by-regexp-with-properties (end-or-beg &optional end-or-inside inside?)
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'buffer-substring 're-search-forward))
+
+(defun b-delete-by-regexp (end-or-beg &optional end-or-inside inside?)
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'delete-region 're-search-forward))
+
+(defun b-kill-by-regexp (end-or-beg &optional end-or-inside inside?)
+  (b-operate-on-region-by-matcher end-or-beg end-or-inside inside? 'kill-region 're-search-forward))
 
 (provide 'b)
 ;;; b.el ends here
